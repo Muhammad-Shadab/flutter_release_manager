@@ -78,8 +78,8 @@ pwd
 This is just a label used in the output file name — it can be anything.
 
 ```
-Ruloans → Ruloans_June_2026_03-45-PM.apk
-MyApp   → MyApp_June_2026_03-45-PM.apk
+MyApp    → MyApp_June_2026_03-45-PM.apk
+MyOther  → MyOther_June_2026_03-45-PM.apk
 ```
 
 Use your app's display name, no spaces.
@@ -119,7 +119,7 @@ Follow the prompts:
 Open the Google Drive folder where you want APKs uploaded, then look at the URL:
 
 ```
-https://drive.google.com/drive/folders/1wP7TZvEoOOo2W_GPVghbhZWQgYcWmF8F
+https://drive.google.com/drive/folders/1AbCdEfGhIjKlMnOpQrStUvWxYz1234567
                                         ↑ this part is your folder ID
 ```
 
@@ -141,7 +141,7 @@ Diawi lets you share IPAs with testers via a link.
 
 1. Go to [developer.apple.com](https://developer.apple.com)
 2. Sign in → click your name top-right → **Membership details**
-3. Copy the **Team ID** (looks like `UC2HYA24R2`)
+3. Copy the **Team ID** (looks like `ABCD1234EF`)
 
 ---
 
@@ -211,10 +211,10 @@ flutter_build_release \
   --platform both \
   --app-dir /path/to/my_app \
   --app-name MyApp \
-  --team-id UC2HYA24R2 \
+  --team-id YOUR_TEAM_ID \
   --diawi-token YOUR_DIAWI_TOKEN \
   --upload-drive \
-  --drive-folder-id 1wP7TZvEoOOo2W_GPVghbhZWQgYcWmF8F \
+  --drive-folder-id YOUR_DRIVE_FOLDER_ID \
   --flavour prod
 ```
 
