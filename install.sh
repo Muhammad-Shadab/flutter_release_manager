@@ -36,7 +36,7 @@ else
   echo ""
   echo -e "  ${CYAN}→${RESET}  Fetching package from pub.dev..."
   dart pub global activate flutter_build_release
-  PACKAGE_DIR="$HOME/.pub-cache/global_packages/flutter_build_release"
+  PACKAGE_DIR=$(find "$HOME/.pub-cache/hosted/pub.dev" -maxdepth 1 -name "flutter_build_release-*" | sort -V | tail -1)
 fi
 
 echo -e "  ${GREEN}✓${RESET}  Package ready"
@@ -71,3 +71,4 @@ else
   echo -e "  sudo mv $TEMP_BIN $INSTALL_DIR/$BINARY_NAME"
 fi
 echo ""
+
