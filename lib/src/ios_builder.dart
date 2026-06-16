@@ -9,13 +9,13 @@ class IosBuilder {
 
   IosBuilder(this.config);
 
-  Future<void> build() async {
+  Future<String?> build() async {
     final now = DateTime.now();
     final dateLabel =
         '${now.year}-${_pad(now.month)}-${_pad(now.day)}_${_pad(now.hour)}-${_pad(now.minute)}';
 
     final iosDir = '${config.appDir}/ios';
-    final workspace = '$iosDir/Runner.xcworkspace';
+    final workspace = _findWorkspace(iosDir);
     final buildOutput = '${config.appDir}/build/release_output';
     final archivePath = '$buildOutput/${config.appName}_$dateLabel.xcarchive';
     final exportPath = '$buildOutput/${config.appName}_${dateLabel}_ipa';
@@ -89,8 +89,28 @@ class IosBuilder {
     Logger.ok('IPA ready (${_fileSize(ipaFile)}) → ${ipaFile.path}');
 
     // 5. Upload to Diawi
+    String? diawiUrl;
     if (config.diawiToken != null) {
-      await DiawiUploader(config).upload(ipaFile);
+      diawiUrl = await DiawiUploader(config).upload(ipaFile);
+    }
+    return diawiUrl;
+  }
+
+  // Scans ios/ for *.xcworkspace; prefers Runner.xcworkspace, then first found.
+  String _findWorkspace(String iosDir) {
+    try {
+      final entries = Directory(iosDir)
+          .listSync()
+          .where((e) => e.path.endsWith('.xcworkspace'))
+          .map((e) => e.path)
+          .toList();
+      if (entries.isEmpty) return '$iosDir/Runner.xcworkspace';
+      return entries.firstWhere(
+        (p) => p.endsWith('/Runner.xcworkspace'),
+        orElse: () => entries.first,
+      );
+    } catch (_) {
+      return '$iosDir/Runner.xcworkspace';
     }
   }
 

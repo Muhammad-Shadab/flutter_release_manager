@@ -8,10 +8,12 @@ A CLI tool that builds your Flutter app (APK + IPA) and distributes it — uploa
 
 | Step | What happens |
 |------|-------------|
-| 1 | Asks you a few questions (platform, app path, upload options) |
+| 1 | Detects your project automatically, then asks a few questions |
 | 2 | Runs `flutter build apk` or `flutter build ios` for you |
 | 3 | For Android: uploads the APK to a Google Drive folder you choose |
 | 4 | For iOS: archives and exports the IPA, then uploads to Diawi and copies the link to your clipboard |
+
+Answers are remembered between runs — you only type things once.
 
 ---
 
@@ -51,42 +53,7 @@ That's all. No manual PATH editing needed.
 
 ---
 
-### 3. Know your Flutter app directory path
-
-This is the folder that contains your app's `pubspec.yaml` file.
-
-```
-my_project/
-├── apps/
-│   └── my_app/          ← this is your app-dir
-│       ├── pubspec.yaml
-│       ├── lib/
-│       └── ios/
-```
-
-To find the full path, open a terminal inside that folder and run:
-
-```bash
-pwd
-# Example output: /Users/john/projects/my_app
-```
-
----
-
-### 4. Choose an app name
-
-This is just a label used in the output file name — it can be anything.
-
-```
-MyApp    → MyApp_June_2026_03-45-PM.apk
-MyOther  → MyOther_June_2026_03-45-PM.apk
-```
-
-Use your app's display name, no spaces.
-
----
-
-### 5. Google Drive setup (Android upload only)
+### 3. Google Drive setup (Android upload only)
 
 You need two things: **rclone** installed and a **Drive folder ID**.
 
@@ -127,7 +94,7 @@ Copy the ID after `/folders/`.
 
 ---
 
-### 6. Diawi token (iOS upload only)
+### 4. Diawi token (iOS upload only)
 
 Diawi lets you share IPAs with testers via a link.
 
@@ -137,7 +104,7 @@ Diawi lets you share IPAs with testers via a link.
 
 ---
 
-### 7. Apple Team ID (iOS builds only)
+### 5. Apple Team ID (iOS builds only)
 
 1. Go to [developer.apple.com](https://developer.apple.com)
 2. Sign in → click your name top-right → **Membership details**
@@ -145,7 +112,7 @@ Diawi lets you share IPAs with testers via a link.
 
 ---
 
-### 8. Xcode command-line tools (iOS only)
+### 6. Xcode command-line tools (iOS only)
 
 ```bash
 xcode-select --install
@@ -155,50 +122,113 @@ xcode-select --install
 
 ## Quick start
 
-Once setup is done, just run:
+Run the tool from inside your Flutter project directory:
 
 ```bash
+cd /path/to/your/flutter/app
 flutter_build_release
 ```
 
-The tool will ask you:
+The tool detects your project automatically and reads the app name from `pubspec.yaml`.
+
+**First run** (building both platforms with Drive + Diawi upload):
 
 ```
+✓  Flutter project detected: /Users/john/projects/my_app
+
   What do you want to build?
-  1) Android only
-  2) iOS only
-  3) Both Android + iOS
+  1) Android only  — generates APK
+  2) iOS only      — generates IPA
+  3) Both          — APK + IPA
 
-  Enter choice [1/2/3]:
+  Enter choice [1/2/3]: 3
 
-  Flutter app directory path:
-  → paste the path from Step 3, e.g. /Users/john/projects/my_app
+  App name [MyApp]:                    ← detected from pubspec.yaml, press Enter
 
-  App name (used in output file names):
-  → e.g. MyApp
+  Upload APK to Google Drive? [y/N]: y
 
-  Upload APK to Google Drive? [y/N]:
-  → y
+  Google Drive folder ID: 1AbCdEfGh...
 
-  Google Drive folder ID:
-  → paste the ID from Step 5
+  Build flavour:
+  1) dev
+  2) prod
+  3) uat
 
-  Choose flavour:
-  0) dev
-  1) prod
-  2) uat
+  Enter choice [1/2/3]: 1
 
-  Apple Developer Team ID:
-  → paste the ID from Step 7
+  Apple Developer Team ID: UC2HYA24R2
 
-  Upload IPA to Diawi? [y/N]:
-  → y
+  Upload IPA to Diawi? [y/N]: y
 
-  Diawi API token:
-  → paste the token from Step 6
+  Diawi API token: abc123...
+
+  ╔══════════════════════════════════════════════╗
+    Build Summary
+  ╚══════════════════════════════════════════════╝
+
+  Platform      Android + iOS
+  App dir       /Users/john/projects/my_app
+  App name      MyApp
+
+  Android
+    Drive upload  Yes
+    Flavour       dev
+    Remote        gdrive
+    Folder ID     1AbCdEfGh...
+
+  iOS
+    Team ID       UC2HYA24R2
+    Scheme        Runner
+    Export        development
+    Diawi upload  Yes
+
+  Press Enter to start the build, or Ctrl+C to cancel...
 ```
 
-That's it — the tool builds and uploads everything automatically.
+**Every run after that** (all values are remembered):
+
+```
+✓  Flutter project detected: /Users/john/projects/my_app
+
+  Enter choice [1/2/3] (last: 3): ↵
+  App name [MyApp]: ↵
+  Upload APK to Google Drive? [y/N]: y
+  Enter choice [1/2/3] (last: 1): ↵
+  Apple Developer Team ID [UC2HYA24R2]: ↵
+  Upload IPA to Diawi? [y/N]: y
+  Diawi API token [abc123...]: ↵
+  → summary → Enter → build starts
+```
+
+At the end, testing URLs are shown together:
+
+```
+  Android APK:
+  https://drive.google.com/file/d/...
+
+  iOS IPA (Diawi):
+  https://i.diawi.com/AbCdEf
+```
+
+The Diawi link is also copied to your clipboard automatically on macOS.
+
+---
+
+## Saved configuration
+
+After your first run, answers are saved to:
+
+```
+<your-app-dir>/.flutter_build_release_config.json
+```
+
+This file stores your folder ID, team ID, app name, and other settings so you don't retype them each run.
+
+> **Important:** Add this file to your `.gitignore` to avoid committing credentials:
+>
+> ```
+> echo ".flutter_build_release_config.json" >> .gitignore
+> ```
 
 ---
 
@@ -227,8 +257,8 @@ You can mix flags and prompts — any flag you omit will be asked interactively.
 | Flag | Description | Default |
 |------|-------------|---------|
 | `--platform`, `-p` | `android`, `ios`, or `both` | prompted |
-| `--app-dir`, `-d` | Path to Flutter app (folder with pubspec.yaml) | prompted |
-| `--app-name`, `-n` | Label used in output file names | prompted |
+| `--app-dir`, `-d` | Path to Flutter app (folder with pubspec.yaml) | auto-detected from CWD |
+| `--app-name`, `-n` | Label used in output file names | detected from pubspec.yaml |
 | `--upload-drive` | Upload APK to Google Drive | prompted |
 | `--drive-folder-id` | Google Drive folder ID | prompted |
 | `--flavour`, `-f` | `dev`, `prod`, or `uat` | prompted |

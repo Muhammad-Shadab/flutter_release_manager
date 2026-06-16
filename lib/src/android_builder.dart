@@ -9,7 +9,7 @@ class AndroidBuilder {
 
   AndroidBuilder(this.config);
 
-  Future<void> build() async {
+  Future<String?> build() async {
     final now = DateTime.now();
     final dateLabel =
         '${now.year}-${_pad(now.month)}-${_pad(now.day)}_${_pad(now.hour)}-${_pad(now.minute)}';
@@ -50,9 +50,19 @@ class AndroidBuilder {
     }
 
     if (config.uploadDrive) {
-      final apkFile = File('${apkDir.path}/app-armeabi-v7a-release.apk');
-      await DriveUploader(config).upload(apkFile);
+      final apkFile = _findApk(apkDir.path);
+      return await DriveUploader(config).upload(apkFile);
     }
+    return null;
+  }
+
+  // Prefers arm64-v8a (all modern devices); falls back to armeabi-v7a.
+  File _findApk(String dir) {
+    for (final abi in ['arm64-v8a', 'armeabi-v7a']) {
+      final f = File('$dir/app-$abi-release.apk');
+      if (f.existsSync()) return f;
+    }
+    return File('$dir/app-armeabi-v7a-release.apk');
   }
 
   String _fileSize(File f) {

@@ -7,7 +7,7 @@ class DriveUploader {
 
   DriveUploader(this.config);
 
-  Future<void> upload(File apkFile) async {
+  Future<String?> upload(File apkFile) async {
     Logger.header('Uploading APK to Google Drive');
 
     _validateRclone();
@@ -57,6 +57,8 @@ class DriveUploader {
     if (url != null) {
       stdout.writeln('  Google Drive URL:\n  $url\n');
     }
+
+    return url;
   }
 
   void _validateRclone() {
