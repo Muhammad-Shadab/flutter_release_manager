@@ -1,5 +1,25 @@
 # Changelog
 
+## 1.0.3
+
+### Changed
+
+- **Diawi upload progress** — complete rewrite of `DiawiUploader`:
+  - Timer-driven single-line progress bar updates every second:
+    `[████░░░░░░░░░░░░░░░░] 60%  185 MB / 310 MB  5.4 MB/s  ETA: 23s`
+  - Per-attempt byte counter isolated from retries; no stale progress on retry
+  - Progress bar pins to 100 % briefly then clears cleanly on completion
+- **Diawi processing status** — deduplicated live status lines while Diawi
+  converts the IPA (`Status: Uploading → Processing → Creating install page →
+  Ready`); only emitted when status text changes, no log spam
+- **Upload statistics** — completion banner now shows upload time, average
+  speed, Diawi processing time, and total time
+- **Error handling** — 401 (invalid token), 413 (file too large), timeout,
+  and no-internet errors each produce a distinct, actionable message with the
+  fix command where applicable
+
+---
+
 ## 1.0.2
 
 ### Fixed
