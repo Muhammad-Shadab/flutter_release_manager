@@ -6,6 +6,7 @@ import 'app_config.dart';
 import 'config.dart';
 import 'config_command.dart';
 import 'config_store.dart';
+import 'gatekeeper.dart';
 import 'logger.dart';
 import 'project_detector.dart';
 import 'rclone_manager.dart';
@@ -43,6 +44,9 @@ class Wizard {
         args.wasParsed('upload-drive');
 
     if (!isCiMode) await _showStartupScreen();
+
+    // Show macOS security notice once before any subprocess is invoked.
+    GatekeeperGuard.showNoticeIfNeeded();
 
     // ── 1. App directory ──────────────────────────────────────────────────────
     final appDir = await _resolveAppDir(args['app-dir'] as String?);

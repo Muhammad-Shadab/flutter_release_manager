@@ -2,11 +2,14 @@ import 'dart:io';
 
 import 'config.dart';
 import 'diawi_uploader.dart';
+import 'gatekeeper.dart';
 import 'logger.dart';
 import 'process_utils.dart';
 
 class IosBuilder {
   final Config config;
+  final _gkFlutter = const GatekeeperBuildGuard('flutter');
+  final _gkXcode = const GatekeeperBuildGuard('xcodebuild');
 
   IosBuilder(this.config);
 
@@ -46,12 +49,13 @@ class IosBuilder {
 
     // 1. flutter build ios
     Logger.step('Running: flutter build ios --release --no-codesign');
-    var code = await runLive(
+    var (code, output) = await runLiveCapturing(
       'flutter',
       ['build', 'ios', '--release', '--no-codesign'],
       workingDirectory: config.appDir,
     );
     if (code != 0) {
+      _gkFlutter.handleFailure(output, code);
       Logger.error('flutter build ios failed (exit $code)');
       exit(code);
     }
@@ -64,7 +68,7 @@ class IosBuilder {
 
     // 3. Archive
     Logger.step('Archiving → $archivePath');
-    code = await runLive('xcodebuild', [
+    (code, output) = await runLiveCapturing('xcodebuild', [
       'archive',
       '-workspace',
       workspace,
@@ -80,6 +84,7 @@ class IosBuilder {
       'DEVELOPMENT_TEAM=${config.teamId}',
     ]);
     if (code != 0 || !Directory(archivePath).existsSync()) {
+      _gkXcode.handleFailure(output, code);
       Logger.error('Archive failed (exit $code)');
       exit(1);
     }
@@ -87,7 +92,7 @@ class IosBuilder {
 
     // 4. Export IPA
     Logger.step('Exporting IPA → $exportPath');
-    code = await runLive('xcodebuild', [
+    (code, output) = await runLiveCapturing('xcodebuild', [
       '-exportArchive',
       '-archivePath',
       archivePath,
@@ -99,6 +104,7 @@ class IosBuilder {
 
     final ipaFile = _findIpa(exportPath);
     if (ipaFile == null) {
+      _gkXcode.handleFailure(output, code);
       Logger.error('Export failed — no IPA found in $exportPath');
       exit(1);
     }

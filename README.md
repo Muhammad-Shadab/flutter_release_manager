@@ -79,6 +79,8 @@ You do **not** need:
 - A service account key file
 - Any prior rclone experience
 
+> **macOS users:** On first use, macOS may show a security dialog asking if you want to allow Flutter, Dart, or rclone to run. Click **Open** or go to **System Settings → Privacy & Security → Allow Anyway**. This approval is required only once per tool. See [macOS Gatekeeper](#macos-shows-a-security-popup-gatekeeper) for full instructions.
+
 ---
 
 ## Step 1 — Install the Package
@@ -707,6 +709,45 @@ Use `development` unless you know you need something else.
 
 ---
 
+### macOS shows a security popup (Gatekeeper)
+
+**Problem:** A dialog appears saying "flutter cannot be opened because the developer cannot be verified" or "Apple cannot verify..." — or a tool is blocked in System Settings.
+
+**Why it happens:** macOS Gatekeeper quarantines every binary downloaded from the internet until you explicitly approve it. Flutter, rclone, and Dart tools are all affected on first use. This is normal behaviour — it is not a virus warning.
+
+**What NOT to do:** Do not click **Move to Trash** or **Cancel**. That removes or blocks the tool, and the build will fail.
+
+**How to allow it — Option 1 (dialog box):**
+1. When the popup appears, click **Cancel** (not Move to Trash)
+2. Open **System Settings → Privacy & Security**
+3. Scroll down to the **Security** section
+4. Find the entry for the blocked tool and click **Allow Anyway**
+5. Run `flutter_release_manager` again — this time click **Open** when prompted
+
+**How to allow it — Option 2 (terminal, faster):**
+```bash
+# Allow flutter
+xattr -d com.apple.quarantine $(which flutter)
+
+# Allow rclone (after init installs it)
+xattr -d com.apple.quarantine $(which rclone)
+
+# Allow dart
+xattr -d com.apple.quarantine $(which dart)
+```
+
+**How to check which tools are quarantined:**
+```bash
+flutter_release_manager doctor
+```
+The doctor output includes a **macOS Gatekeeper** section that lists any quarantined binaries and shows the exact commands to clear them.
+
+**This only happens once per tool.** After you approve a binary, macOS never asks again.
+
+> **Recommended screenshot:** show System Settings → Privacy & Security with "Allow Anyway" visible next to "flutter". This is the single most common support question for macOS users.
+
+---
+
 ### `rclone not found` after running `init`
 
 **Problem:** rclone installation failed.
@@ -819,6 +860,9 @@ On Windows, add `%LOCALAPPDATA%\Pub\Cache\bin` to your System PATH via **Control
 
 ## FAQ
 
+**Why am I seeing macOS security warnings?**
+macOS Gatekeeper quarantines every tool downloaded from the internet until you approve it. When you see "flutter cannot be opened because the developer cannot be verified", go to **System Settings → Privacy & Security → scroll to Security → Allow Anyway**. Run the command again and click **Open** when prompted. This is a one-time approval per tool — once approved, macOS never asks again. See the [macOS Gatekeeper troubleshooting section](#macos-shows-a-security-popup-gatekeeper) for step-by-step instructions.
+
 **Do I need a Google Cloud Console account?**
 No. This tool uses rclone's built-in credentials. You sign in with the regular Google sign-in page — no Cloud Console, no project, no API key.
 
@@ -867,6 +911,8 @@ Yes, for Android builds. iOS builds require macOS (Xcode requirement from Apple)
 | `doctor` output (all green) | `doc/screenshots/doctor.png` | "Health check: all systems ready" |
 | Build progress + upload progress | `doc/screenshots/build.png` | "Building APK and uploading to Google Drive" |
 | Final output with Drive link | `doc/screenshots/result.png` | "Done: shareable Google Drive link ready to paste" |
+| macOS security dialog | `doc/screenshots/gatekeeper.png` | "First-time macOS approval — click Open" |
+| System Settings → Allow Anyway | `doc/screenshots/gatekeeper_settings.png` | "System Settings → Privacy & Security → Allow Anyway" |
 
 To take screenshots that render well on pub.dev: use a terminal with a dark theme and a font size of at least 14pt.
 

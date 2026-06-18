@@ -1,12 +1,14 @@
 import 'dart:io';
 
 import 'config.dart';
+import 'gatekeeper.dart';
 import 'logger.dart';
 import 'process_utils.dart';
 import 'rclone_uploader.dart';
 
 class AndroidBuilder {
   final Config config;
+  final _gk = const GatekeeperBuildGuard('flutter');
 
   AndroidBuilder(this.config);
 
@@ -34,12 +36,14 @@ class AndroidBuilder {
     Logger.header('Android APK  ($dateLabel)');
     Logger.step('Running: flutter build apk --split-per-abi');
 
-    final code = await runLive(
+    final (code, output) = await runLiveCapturing(
       'flutter',
       ['build', 'apk', '--split-per-abi'],
       workingDirectory: config.appDir,
     );
+
     if (code != 0) {
+      _gk.handleFailure(output, code);
       Logger.error('Android build failed (exit $code)');
       exit(code);
     }
@@ -82,7 +86,6 @@ class AndroidBuilder {
 
   // ── APK selection ─────────────────────────────────────────────────────────
 
-  /// Prefers arm64-v8a (all modern devices); falls back to armeabi-v7a.
   File _findApk(String dir) {
     final apk = _findApkOrNull(dir);
     if (apk != null) return apk;

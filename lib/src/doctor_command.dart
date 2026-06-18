@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'app_config.dart';
+import 'gatekeeper.dart';
 import 'logger.dart';
 import 'rclone_manager.dart';
 
@@ -14,12 +15,18 @@ class DoctorCommand {
 
     var allOk = true;
 
+    allOk = _check('dart', _checkDart()) && allOk;
     allOk = _check('flutter', _checkFlutter()) && allOk;
     allOk = _check('rclone', _checkRclone()) && allOk;
     allOk = _check('Drive remote', _checkRemote()) && allOk;
     allOk = _check('Drive connection', _checkDriveConnection()) && allOk;
     allOk = _check('Drive folder', _checkFolder()) && allOk;
     _checkDiawi(); // advisory only — not a blocker
+
+    if (Platform.isMacOS) {
+      stdout.writeln('');
+      _checkMacosGatekeeper();
+    }
 
     stdout.writeln('');
     if (allOk) {
@@ -33,6 +40,21 @@ class DoctorCommand {
   }
 
   // ── Checks ─────────────────────────────────────────────────────────────────
+
+  _CheckResult _checkDart() {
+    final cmd = Platform.isWindows ? 'where' : 'which';
+    if (Process.runSync(cmd, ['dart'], runInShell: true).exitCode != 0) {
+      return _CheckResult.fail(
+        'dart not found',
+        'Install Flutter (includes Dart): https://flutter.dev/docs/get-started/install',
+      );
+    }
+    final ver = Process.runSync('dart', ['--version'], runInShell: true);
+    final versionLine = (ver.stdout as String).trim().isNotEmpty
+        ? (ver.stdout as String).trim().split('\n').first
+        : (ver.stderr as String).trim().split('\n').first;
+    return _CheckResult.ok(versionLine.isNotEmpty ? versionLine : 'dart found');
+  }
 
   _CheckResult _checkFlutter() {
     final cmd = Platform.isWindows ? 'where' : 'which';
@@ -115,6 +137,49 @@ class DoctorCommand {
         _CheckResult.skip('not set — iOS Diawi upload will be skipped'),
       );
     }
+  }
+
+  /// macOS-only: checks whether key binaries carry the quarantine flag.
+  void _checkMacosGatekeeper() {
+    stdout.writeln('  ─── macOS Gatekeeper ───────────────────────────────');
+    stdout.writeln('');
+
+    final toCheck = ['flutter', 'dart'];
+    if (RcloneManager.isInstalled()) toCheck.add('rclone');
+
+    final quarantined = GatekeeperGuard.quarantinedBinaries(toCheck);
+
+    if (quarantined.isEmpty) {
+      Logger.ok(
+        'No quarantine flags found on: ${toCheck.join(', ')}',
+      );
+      stdout.writeln('');
+      stdout.writeln(
+        '  All tools are approved to run. No Gatekeeper prompts expected.',
+      );
+    } else {
+      for (final cmd in quarantined) {
+        Logger.skip(
+          '$cmd has a quarantine flag — macOS may block it on next run.',
+        );
+      }
+      stdout.writeln('');
+      stdout.writeln('  To clear quarantine flags:');
+      for (final cmd in quarantined) {
+        stdout.writeln(
+          '    xattr -d com.apple.quarantine \$(which $cmd)',
+        );
+      }
+      stdout.writeln('');
+      stdout.writeln(
+        '  Or run each tool once — macOS will show "Allow" in System Settings.',
+      );
+      stdout.writeln(
+        '  Privacy & Security → scroll to Security → Allow Anyway.',
+      );
+    }
+
+    stdout.writeln('');
   }
 
   bool _check(String label, _CheckResult result) {

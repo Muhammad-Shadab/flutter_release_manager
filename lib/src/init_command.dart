@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'app_config.dart';
+import 'gatekeeper.dart';
 import 'logger.dart';
 import 'rclone_manager.dart';
 
@@ -16,6 +17,9 @@ import 'rclone_manager.dart';
 class InitCommand {
   Future<void> run() async {
     _printBanner();
+
+    // Show macOS security notice before invoking any external tools.
+    GatekeeperGuard.showNoticeIfNeeded();
 
     // Migrate machine config and Diawi token from previous package names.
     AppConfig.migrateFromOldPackageName();
