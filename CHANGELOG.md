@@ -1,5 +1,34 @@
 # Changelog
 
+## 1.0.6
+
+### Fixed
+
+- **Duplicate Google OAuth browser** — `flutter_release_manager init` no longer
+  opens a second browser tab after a successful Google sign-in. Root cause: the
+  previous `rclone config create` call did not pass `--non-interactive`, so
+  rclone silently accepted the default (`true`) for its internal
+  "Already have a token - refresh?" question and started a second OAuth flow.
+  Fixed by driving rclone's config wizard programmatically: the wizard is
+  stepped through with `--non-interactive` + `--continue --state … --result …`
+  until the state is empty (done), and the `config_refresh_token` question is
+  always answered `false` to keep the freshly-obtained token.
+- **Remote creation now verified** — after the wizard loop completes,
+  `remoteExists()` is called to confirm the remote was written; a clear
+  actionable error is shown on failure instead of silently succeeding.
+- **Cleaner error messages** — internal rclone exit codes and raw stderr are no
+  longer surfaced to users; OAuth failure messages now read
+  `Google authorization failed` and
+  `Google authorization did not complete successfully`.
+
+### Improved
+
+- Google Drive setup is now guaranteed to require exactly one browser tab.
+- `flutter_release_manager init` handles the rclone wizard loop for any number
+  of wizard steps (cap 10), future-proofing against rclone adding new questions.
+
+---
+
 ## 1.0.5
 
 ### Fixed

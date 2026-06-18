@@ -129,7 +129,7 @@ class RcloneManager {
   ///
   /// Scenarios handled without any interactive rclone prompts:
   ///   - Upgrade from flutter_build_release: migrates old remote, no re-auth
-  ///   - New user: opens browser OAuth, embeds token in config
+  ///   - New user: opens browser OAuth once, embeds token in config
   ///   - Existing valid token: no-op
   ///   - Expired / revoked token: deletes stale config, re-authorizes
   static Future<void> ensureRemoteAndAuthenticated() async {
@@ -150,6 +150,7 @@ class RcloneManager {
     Logger.step('Saving credentials to rclone remote "$remoteName"...');
     _createRemoteWithToken(tokenJson);
     Logger.ok('Remote "$remoteName" configured.');
+
     // Cache the account email now while the token is fresh.
     await fetchAndCacheEmail();
   }
@@ -289,6 +290,8 @@ class RcloneManager {
     );
   }
 
+  // ── Browser OAuth ──────────────────────────────────────────────────────────
+
   /// Runs `rclone authorize drive` — browser-only, completely non-interactive.
   ///
   /// stdin is closed immediately (EOF). Output is monitored for interactive
@@ -303,25 +306,22 @@ class RcloneManager {
       runInShell: Platform.isWindows,
     );
 
-    // Send EOF to rclone's stdin immediately — prevents any blocking read.
+    // Send EOF immediately — prevents any blocking stdin read.
     process.stdin.close().ignore();
 
     Logger.step('Waiting for Google authorization (up to 5 minutes)...');
 
     final buffer = StringBuffer();
 
-    // Capture output only — do not forward raw rclone output to the terminal.
-    final stdoutSub =
-        process.stdout.transform(systemEncoding.decoder).listen((chunk) {
+    void handleChunk(String chunk) {
       buffer.write(chunk);
       if (_hasInteractivePrompt(chunk)) process.kill();
-    });
+    }
 
+    final stdoutSub =
+        process.stdout.transform(systemEncoding.decoder).listen(handleChunk);
     final stderrSub =
-        process.stderr.transform(systemEncoding.decoder).listen((chunk) {
-      buffer.write(chunk);
-      if (_hasInteractivePrompt(chunk)) process.kill();
-    });
+        process.stderr.transform(systemEncoding.decoder).listen(handleChunk);
 
     late final int exitCode;
     try {
@@ -342,7 +342,7 @@ class RcloneManager {
 
     if (exitCode != 0) {
       stderr.writeln(
-        '\n  ❌  rclone authorize failed (exit $exitCode).\n'
+        '\n  ❌  Google authorization failed.\n'
         '      Re-run: flutter_release_manager init\n',
       );
       exit(1);
@@ -354,7 +354,7 @@ class RcloneManager {
 
     if (tokenJson == null || tokenJson.isEmpty) {
       stderr.writeln(
-        '\n  ❌  Could not extract OAuth token from rclone output.\n'
+        '\n  ❌  Google authorization did not complete successfully.\n'
         '      Re-run: flutter_release_manager init\n',
       );
       exit(1);
@@ -363,10 +363,21 @@ class RcloneManager {
     return tokenJson;
   }
 
-  /// Creates the rclone remote with the OAuth token pre-embedded.
-  /// Uses runInShell: false so the token JSON is never shell-interpreted.
+  // ── Remote creation ────────────────────────────────────────────────────────
+
+  /// Creates the rclone remote with a pre-obtained OAuth token.
+  ///
+  /// Uses `--non-interactive` to drive rclone's config wizard programmatically
+  /// so no browser is opened. Without this flag, rclone silently takes the
+  /// default (true) for its "Already have a token - refresh?" question, which
+  /// triggers a second OAuth browser flow even when a token is already supplied.
+  ///
+  /// The wizard exits with code 1 + JSON on stdout when it has a question.
+  /// We loop, answering each question, until the state is empty (wizard done).
+  /// config_refresh_token is always answered "false" — we already have a fresh
+  /// token from `rclone authorize drive` and must not trigger another browser.
   static void _createRemoteWithToken(String tokenJson) {
-    final result = Process.runSync(
+    var result = Process.runSync(
       'rclone',
       [
         'config',
@@ -377,16 +388,80 @@ class RcloneManager {
         'drive',
         'token',
         tokenJson,
+        '--non-interactive',
       ],
       runInShell: false,
     );
-    if (result.exitCode != 0) {
+
+    // Walk the wizard until the state is empty (done).
+    // --non-interactive exits with code 1 + JSON when it has a question;
+    // code 0 with empty state means the wizard completed successfully.
+    for (var step = 1; step <= 10; step++) {
+      final state = _parseRcloneState(result.stdout as String);
+      if (state == null) break; // empty state → wizard complete
+
+      final answer = _wizardAnswer(result.stdout as String);
+
+      result = Process.runSync(
+        'rclone',
+        [
+          'config',
+          'create',
+          remoteName,
+          'drive',
+          '--continue',
+          '--state',
+          state,
+          '--result',
+          answer,
+          '--non-interactive',
+        ],
+        runInShell: false,
+      );
+    }
+
+    // Verify the remote was actually created.
+    if (!remoteExists()) {
       stderr.writeln(
-        '  ❌  Failed to create rclone remote: ${result.stderr}',
+        '  ❌  Failed to configure Google Drive connection.\n'
+        '      Re-run: flutter_release_manager init',
       );
       exit(1);
     }
   }
+
+  /// Extracts the State field from a `--non-interactive` JSON response.
+  /// Returns null when the state is empty (wizard complete).
+  ///
+  /// Uses regex instead of jsonDecode because rclone v1.74+ embeds literal
+  /// newline bytes (0x0A) inside the JSON Help string, making the output
+  /// invalid JSON that jsonDecode rejects.
+  static String? _parseRcloneState(String output) {
+    final match = RegExp(r'"State"\s*:\s*"([^"]*)"').firstMatch(output);
+    final state = match?.group(1);
+    return (state == null || state.isEmpty) ? null : state;
+  }
+
+  /// Returns the answer for a wizard question.
+  ///
+  /// config_refresh_token → always "false": we have a fresh token from
+  ///   `rclone authorize drive`; telling rclone to refresh would open a
+  ///   second browser tab, which is the bug this method exists to prevent.
+  /// Everything else → DefaultStr from the response (rclone's own default).
+  ///
+  /// Regex-based for the same reason as [_parseRcloneState].
+  static String _wizardAnswer(String output) {
+    final nameMatch = RegExp(r'"Name"\s*:\s*"([^"]*)"').firstMatch(output);
+    final defaultMatch =
+        RegExp(r'"DefaultStr"\s*:\s*"([^"]*)"').firstMatch(output);
+    final name = nameMatch?.group(1);
+    final defaultStr = defaultMatch?.group(1);
+
+    if (name == 'config_refresh_token') return 'false';
+    return defaultStr ?? 'false';
+  }
+
+  // ── Prompt detection ───────────────────────────────────────────────────────
 
   /// Returns true if [text] contains any pattern that indicates rclone is
   /// waiting for interactive input. The process must be killed immediately.
