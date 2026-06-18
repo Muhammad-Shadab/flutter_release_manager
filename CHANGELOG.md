@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.0.7
+
+### Added
+
+- **`--version` flag** — `flutter_release_manager --version` prints the package
+  name and version then exits with code 0
+- **`-v` shortcut** — alias for `--version`
+- **`version` command** — `flutter_release_manager version` works the same way
+- **Full semantic version in banner** — the welcome banner and `--help` output
+  now show the full version (`v1.0.7`) instead of the static label `v1`
+
+---
+
 ## 1.0.6
 
 ### Fixed

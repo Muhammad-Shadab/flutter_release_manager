@@ -6,9 +6,18 @@ import 'package:flutter_release_manager/src/doctor_command.dart';
 import 'package:flutter_release_manager/src/init_command.dart';
 import 'package:flutter_release_manager/src/ios_builder.dart';
 import 'package:flutter_release_manager/src/logger.dart';
+import 'package:flutter_release_manager/src/version.dart';
 import 'package:flutter_release_manager/src/wizard.dart';
 
 Future<void> main(List<String> args) async {
+  if (args.isNotEmpty &&
+      (args.first == 'version' ||
+          args.first == '--version' ||
+          args.first == '-v')) {
+    _printVersion();
+    return;
+  }
+
   if (args.isNotEmpty && args.first == 'init') {
     await InitCommand().run();
     return;
@@ -48,4 +57,15 @@ Future<void> main(List<String> args) async {
       stdout.writeln('');
     }
   }
+}
+
+void _printVersion() {
+  stdout.writeln('');
+  stdout.writeln('  $packageName $packageVersion');
+  stdout.writeln('');
+  stdout.writeln('  Build · Archive · Distribute');
+  stdout.writeln('');
+  stdout.writeln('  Package: $packageName');
+  stdout.writeln('  Version: $packageVersion');
+  stdout.writeln('');
 }

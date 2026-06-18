@@ -10,6 +10,7 @@ import 'gatekeeper.dart';
 import 'logger.dart';
 import 'project_detector.dart';
 import 'rclone_manager.dart';
+import 'version.dart';
 
 class Wizard {
   Map<String, dynamic> _saved = {};
@@ -795,7 +796,7 @@ class Wizard {
   void _printWelcome() {
     stdout.writeln('');
     stdout.writeln('╔══════════════════════════════════════════════╗');
-    stdout.writeln('  flutter_release_manager  v1');
+    stdout.writeln('  $packageName  v$packageVersion');
     stdout.writeln('  Build · Archive · Distribute');
     stdout.writeln('╚══════════════════════════════════════════════╝');
     stdout.writeln('');
@@ -820,13 +821,14 @@ class Wizard {
 
   void _printUsage(ArgParser parser) {
     stdout.writeln('''
-flutter_release_manager — Build and distribute Flutter apps
+flutter_release_manager v$packageVersion — Build and distribute Flutter apps
 
 Commands:
   flutter_release_manager          Build and upload (interactive)
   flutter_release_manager init     First-time setup: install rclone, sign into Google Drive
   flutter_release_manager doctor   Check all prerequisites
   flutter_release_manager config   Edit saved configuration
+  flutter_release_manager version  Show version information
 
 Flags (useful for CI/scripts):
   flutter_release_manager --platform <android|ios|both> --app-dir <path> --app-name <name> [options]
