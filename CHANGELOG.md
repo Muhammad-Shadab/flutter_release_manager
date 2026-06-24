@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.9
+
+### Fixed
+
+- **iOS IPA install failure** — changed the default `--export-method` from `development` to `ad-hoc`. Development IPAs can only be installed on devices explicitly registered in the development provisioning profile; ad-hoc is the correct method for Diawi distribution and works on any registered device.
+- Added `ad-hoc` to the allowed values for `--export-method` and removed the incorrect `release-testing` alias.
+
+---
+
 ## 1.0.8
 
 ### Changed
