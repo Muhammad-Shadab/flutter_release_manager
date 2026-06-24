@@ -760,13 +760,29 @@ The arm64-v8a APK is uploaded (covers all modern Android phones). A fallback to 
 
 ### Export Methods
 
+When you build iOS in interactive mode the tool shows a numbered picker — no need to remember flag names:
+
+```
+iOS Export Method
+─────────────────
+  How should the IPA be signed?
+
+  1) development     — device must be registered in Apple Developer portal
+  2) release-testing — Ad Hoc (requires Ad Hoc provisioning profiles)
+  3) app-store       — App Store / TestFlight submission
+
+  Enter choice [1/2/3] (default: 1):
+```
+
+The previously-saved choice is the default — just press Enter to keep it. In CI mode (or when `--export-method` is passed as a flag) no prompt is shown.
+
 | Value | Use case | When to use |
 |-------|----------|-------------|
-| `development` | Development distribution — device must be registered in Apple Developer portal | **Default. Works for Diawi if the device is a registered development device.** |
-| `release-testing` | Ad Hoc distribution — requires explicit Ad Hoc provisioning profiles in Apple portal for every bundle ID | When you have Ad Hoc profiles set up for all targets |
+| `development` | Development — device must be registered in Apple Developer portal | **Default.** Use for Diawi distribution to registered development devices. |
+| `release-testing` | Ad Hoc — requires explicit Ad Hoc provisioning profiles for every bundle ID | Only when you have Ad Hoc profiles set up for all targets |
 | `app-store` | App Store / TestFlight submission | Final release builds |
 
-> **Note:** `ad-hoc` is a deprecated alias for `release-testing` in Xcode 15+. Use `release-testing` if you need Ad Hoc distribution. `release-testing` requires separate Ad Hoc provisioning profiles to be created in the Apple Developer portal for every bundle ID in your app (including Notification Service Extensions etc.).
+> **Note:** `ad-hoc` is a deprecated alias for `release-testing` in Xcode 15+. `release-testing` requires separate Ad Hoc provisioning profiles for every bundle ID in your app (including Notification Service Extensions).
 
 ---
 
@@ -782,7 +798,7 @@ The arm64-v8a APK is uploaded (covers all modern Android phones). A fallback to 
 | Drive folder not in list during `init` | Choose "Enter folder name manually" — it will be created on first upload |
 | `Diawi upload failed` | Regenerate token at diawi.com → Account → API Access Tokens |
 | `Archive failed` / `Export failed` (iOS) | Verify Team ID is 10 chars, run `xcode-select --install`, try archiving in Xcode |
-| IPA downloads but won't install | Make sure `--export-method` is `ad-hoc`, not `development` |
+| IPA downloads but won't install | Use `development` for devices registered in your Apple portal, or `release-testing` if you have Ad Hoc profiles |
 | `flutter build apk` fails | Run `flutter build apk --split-per-abi` directly to see the error |
 | Upload fails despite green doctor | Re-run `flutter_release_manager init` to refresh the Drive token |
 | `command not found: flutter_release_manager` | Add `$HOME/.pub-cache/bin` to your PATH |

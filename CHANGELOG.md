@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.0.12
+
+### Added
+
+- **Interactive iOS export method picker** — when building iOS in interactive mode, the tool now asks which export method to use instead of silently applying a saved default:
+  ```
+  1) development     — device must be registered in Apple Developer portal
+  2) release-testing — Ad Hoc (requires Ad Hoc provisioning profiles)
+  3) app-store       — App Store / TestFlight submission
+  ```
+  The previously-saved value is pre-selected as the default so pressing Enter keeps it. In CI mode (or when `--export-method` is passed), no prompt is shown.
+
+---
+
 ## 1.0.11
 
 ### Fixed

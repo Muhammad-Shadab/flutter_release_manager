@@ -126,9 +126,16 @@ class Wizard {
     final scheme = args.wasParsed('scheme')
         ? args['scheme'] as String
         : (_saved['scheme'] as String? ?? 'Runner');
-    final exportMethod = args.wasParsed('export-method')
-        ? args['export-method'] as String
-        : (_saved['exportMethod'] as String? ?? 'development');
+
+    final String exportMethod;
+    if (args.wasParsed('export-method')) {
+      exportMethod = args['export-method'] as String;
+    } else if (buildIos && !isCiMode) {
+      exportMethod =
+          await _pickExportMethod(_saved['exportMethod'] as String?);
+    } else {
+      exportMethod = _saved['exportMethod'] as String? ?? 'development';
+    }
 
     // ── 8. iOS / Diawi ────────────────────────────────────────────────────────
     String? teamId = args['team-id'] as String?;
@@ -662,6 +669,44 @@ class Wizard {
             reason: 'Enter 1, 2, or 3.',
             fix: '1 = DEV, 2 = UAT, 3 = PROD',
           );
+      }
+    }
+  }
+
+  // ── Export method picker ──────────────────────────────────────────────────
+
+  Future<String> _pickExportMethod(String? saved) async {
+    _printSection('iOS Export Method');
+    stdout.writeln('');
+    stdout.writeln('  How should the IPA be signed?');
+    stdout.writeln('');
+    stdout.writeln(
+        '  1) development     — device must be registered in Apple Developer portal');
+    stdout.writeln(
+        '  2) release-testing — Ad Hoc (requires Ad Hoc provisioning profiles)');
+    stdout.writeln(
+        '  3) app-store       — App Store / TestFlight submission');
+    stdout.writeln('');
+
+    final defaultIdx = switch (saved) {
+      'release-testing' => '2',
+      'app-store' => '3',
+      _ => '1',
+    };
+
+    while (true) {
+      stdout.write('  Enter choice [1/2/3] (default: $defaultIdx): ');
+      final raw = stdin.readLineSync()?.trim() ?? '';
+      final choice = raw.isEmpty ? defaultIdx : raw;
+      switch (choice) {
+        case '1':
+          return 'development';
+        case '2':
+          return 'release-testing';
+        case '3':
+          return 'app-store';
+        default:
+          stdout.writeln('  Please enter 1, 2, or 3.');
       }
     }
   }
